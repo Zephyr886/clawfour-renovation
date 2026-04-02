@@ -2,13 +2,16 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getNodeById } from '@/lib/data'
 import prisma from '@/lib/prisma'
-import { getSession } from '@/lib/auth'
+import { requireNodeAccess } from '@/lib/rbac'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const access = await requireNodeAccess(request, params.id, 'read')
+    if ('error' in access) return access.error
+
     const node = await getNodeById(params.id)
     if (!node) return NextResponse.json({ error: 'Node not found' }, { status: 404 })
     return NextResponse.json({ data: node })
@@ -23,43 +26,87 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = getSession(request)
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const access = await requireNodeAccess(request, params.id, 'write')
+    if ('error' in access) return access.error
 
     const body = await request.json()
-    const allowedFields = ['status', 'urgency', 'assignee', 'plannedDate', 'actualDate', 'title', 'description']
+    const allowedFields = ['status', 'urgency', 'assignee', 'plannedDate', 'actualDate', 'title', 'description', 'phaseId', 'order']
     const updateData: Record<string, any> = {}
     for (const field of allowedFields) {
-      if (body[field] !== undefined) updateData[field] = body[field]
+      if (body[field] !== undefined) {
+        if (field === 'plannedDate' || field === 'actualDate') {
+          updateData[field] = body[field] ? new Date(body[field]) : null
+        } else if (field === 'order') {
+          updateData[field] = parseInt(body[field])
+        } else {
+          updateData[field] = body[field]
+        }
+      }
     }
 
-    const node = await prisma.node.update({
-      where: { id: params.id },
-      data: updateData,
+    const targetPhaseId = updateData.phaseId || access.context.node.phaseId
+    const targetPhase = await prisma.phase.findFirst({
+      where: { id: targetPhaseId, projectId: access.context.projectId },
+      select: { id: true },
     })
+    if (!targetPhase) {
+      return NextResponse.json({ error: '目标阶段不存在或不属于当前项目' }, { status: 400 })
+    }
 
-    // Log activity
-    const nodeWithProject = await prisma.node.findUnique({
-      where: { id: params.id },
-      include: { phase: { select: { projectId: true } } },
-    })
-    if (nodeWithProject) {
-      await prisma.activityLog.create({
-        data: {
-          projectId: nodeWithProject.phase.projectId,
-          nodeId: params.id,
-          action: 'UPDATE',
-          entityType: 'Node',
-          entityId: params.id,
-          description: `更新了节点「${node.title}」`,
-          userId: session.id,
-        },
+    const node = await prisma.$transaction(async tx => {
+      const updated = await tx.node.update({
+        where: { id: params.id },
+        data: updateData,
       })
-    }
+      return updated
+    })
+
+    await prisma.activityLog.create({
+      data: {
+        projectId: access.context.projectId,
+        nodeId: params.id,
+        action: 'UPDATED',
+        entityType: 'Node',
+        entityId: params.id,
+        description: `更新了节点「${node.title}」`,
+        changes: JSON.stringify(updateData),
+        userId: access.context.user.id,
+      },
+    })
 
     return NextResponse.json({ data: node })
   } catch (error) {
     console.error('PATCH node error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const access = await requireNodeAccess(request, params.id, 'write')
+    if ('error' in access) return access.error
+
+    await prisma.$transaction(async tx => {
+      await tx.node.delete({ where: { id: params.id } })
+    })
+
+    await prisma.activityLog.create({
+      data: {
+        projectId: access.context.projectId,
+        action: 'DELETED',
+        entityType: 'Node',
+        entityId: params.id,
+        description: `删除了节点「${access.context.node.title}」`,
+        userId: access.context.user.id,
+      },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('DELETE node error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

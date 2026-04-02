@@ -1,13 +1,19 @@
 export const dynamic = 'force-dynamic'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getProjectById } from '@/lib/data'
+import { getRequestAuthUser } from '@/lib/session'
 
 export async function GET(
-  req: Request,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const project = await getProjectById(params.id)
+    const user = await getRequestAuthUser(req)
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const project = await getProjectById(params.id, user)
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }

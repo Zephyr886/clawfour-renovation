@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { Home, LayoutDashboard, Clock, Users, Wrench, LogOut } from 'lucide-react'
-import { cn, roleLabel } from '@/lib/utils'
+import { Home, LayoutDashboard, Clock, Users, Wrench } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { SessionUser } from '@/types'
+import { UserNav } from './user-nav'
 
 interface NavbarProps {
   user?: SessionUser | null
@@ -54,38 +55,7 @@ export function Navbar({ user, currentPath = '' }: NavbarProps) {
             })}
           </div>
 
-          {/* User */}
-          <div className="flex items-center gap-2">
-            {user ? (
-              <>
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50">
-                  <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-medium">
-                    {(user.name || user.username).charAt(0).toUpperCase()}
-                  </div>
-                  <div className="text-xs">
-                    <div className="font-medium text-gray-900">{user.name || user.username}</div>
-                    <div className="text-gray-500">{roleLabel(user.role)}</div>
-                  </div>
-                </div>
-                <form action="/api/auth/logout" method="POST">
-                  <button
-                    type="submit"
-                    className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                    title="退出登录"
-                  >
-                    <LogOut size={16} />
-                  </button>
-                </form>
-              </>
-            ) : (
-              <Link
-                href="/"
-                className="px-3 py-1.5 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors"
-              >
-                登录
-              </Link>
-            )}
-          </div>
+          <UserNav initialUser={user} />
         </div>
       </div>
     </nav>

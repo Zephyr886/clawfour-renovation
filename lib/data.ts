@@ -1,4 +1,6 @@
 import prisma from '@/lib/prisma'
+import { canAccessProject, type ProjectAction } from '@/lib/rbac'
+import type { AuthUser } from '@/lib/session'
 
 // ============================================================
 // Projects
@@ -37,8 +39,8 @@ export async function getProjects(userId?: string, role?: string) {
   })
 }
 
-export async function getProjectById(id: string) {
-  return prisma.project.findUnique({
+export async function getProjectById(id: string, user?: AuthUser | null, action: ProjectAction = 'read') {
+  const project = await prisma.project.findUnique({
     where: { id },
     include: {
       owner: true,
@@ -58,10 +60,14 @@ export async function getProjectById(id: string) {
       _count: { select: { materials: true, comments: true, logs: true } },
     },
   })
+
+  if (!project) return null
+  if (user && !canAccessProject(user, project.id, action)) return null
+  return project
 }
 
-export async function getProjectTimeline(projectId: string) {
-  return prisma.project.findUnique({
+export async function getProjectTimeline(projectId: string, user?: AuthUser | null, action: ProjectAction = 'read') {
+  const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: {
       owner: { select: { id: true, name: true, username: true, role: true } },
@@ -80,14 +86,18 @@ export async function getProjectTimeline(projectId: string) {
       },
     },
   })
+
+  if (!project) return null
+  if (user && !canAccessProject(user, project.id, action)) return null
+  return project
 }
 
 // ============================================================
 // Nodes
 // ============================================================
 
-export async function getNodeById(nodeId: string) {
-  return prisma.node.findUnique({
+export async function getNodeById(nodeId: string, user?: AuthUser | null, action: ProjectAction = 'read') {
+  const node = await prisma.node.findUnique({
     where: { id: nodeId },
     include: {
       phase: { include: { project: true } },
@@ -115,6 +125,10 @@ export async function getNodeById(nodeId: string) {
       },
     },
   })
+
+  if (!node) return null
+  if (user && !canAccessProject(user, node.projectId, action)) return null
+  return node
 }
 
 // ============================================================

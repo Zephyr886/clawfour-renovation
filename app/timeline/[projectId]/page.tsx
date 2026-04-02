@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getProjectTimeline } from '@/lib/data'
+import { getMaterials, getProjectTimeline } from '@/lib/data'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge } from '@/components/shared/status-badge'
@@ -9,6 +9,9 @@ import { ProgressBar } from '@/components/shared/progress-bar'
 import { EmptyState } from '@/components/shared/empty-state'
 import { formatDate, calcProjectProgress, statusLabel, PHASE_LABELS } from '@/lib/utils'
 import { ArrowLeft, ChevronRight, Package, MessageSquare, User, Calendar } from 'lucide-react'
+import { getCurrentAuthUser } from '@/lib/session'
+import { MaterialsManager } from '@/components/timeline/materials-manager'
+import { NodesManager } from '@/components/timeline/nodes-manager'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,9 +20,14 @@ export default async function ProjectTimelinePage({
 }: {
   params: { projectId: string }
 }) {
+  const user = await getCurrentAuthUser()
   let project: any = null
+  let materials: any[] = []
   try {
-    project = await getProjectTimeline(params.projectId)
+    project = await getProjectTimeline(params.projectId, user)
+    if (project) {
+      materials = await getMaterials(params.projectId)
+    }
   } catch {
     // db error
   }
@@ -48,7 +56,7 @@ export default async function ProjectTimelinePage({
   }
 
   return (
-    <AppLayout currentPath="/timeline">
+    <AppLayout user={user} currentPath="/timeline">
       {/* Back + Project Header */}
       <div className="mb-6">
         <Link
@@ -203,6 +211,23 @@ export default async function ProjectTimelinePage({
           })}
         </div>
       )}
+
+      <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <MaterialsManager
+          projectId={project.id}
+          projectName={project.name}
+          nodes={allNodes.map((node: any) => ({ id: node.id, title: node.title }))}
+          initialMaterials={materials}
+          user={user}
+        />
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-text">节点管理</h2>
+            <p className="text-sm text-textSecondary">支持新增、编辑、删除、修改状态、日期与阶段归属</p>
+          </div>
+          <NodesManager projectId={project.id} phases={project.phases || []} user={user} />
+        </div>
+      </div>
     </AppLayout>
   )
 }
