@@ -31,9 +31,17 @@ export default function LoginPage() {
       }
 
       const role = data.user?.role
-      if (role === 'ADMIN') router.push('/admin')
-      else if (role === 'COMPANY') router.push('/company')
-      else router.push('/homeowner')
+      const callbackUrl = searchParams.get('callbackUrl')
+      const target = callbackUrl
+        ? decodeURIComponent(callbackUrl)
+        : role === 'ADMIN'
+          ? '/admin'
+          : role === 'COMPANY'
+            ? '/company'
+            : '/homeowner'
+
+      router.refresh()
+      router.replace(target)
     } catch {
       setError('网络错误，请重试')
     } finally {
