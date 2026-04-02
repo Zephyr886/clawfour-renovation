@@ -42,7 +42,7 @@ export default function LoginPage() {
             : '/homeowner'
 
       router.refresh()
-      router.replace(target)
+      window.location.assign(target)
     } catch {
       setError('网络错误，请重试')
     } finally {
