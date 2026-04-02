@@ -1,6 +1,19 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { verifyToken, COOKIE_NAME } from './lib/auth'
+import { COOKIE_NAME } from './lib/auth'
+
+function readJwtPayload(token: string): { role?: string; exp?: number } | null {
+  try {
+    const [, payload] = token.split('.')
+    if (!payload) return null
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4)
+    const json = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'))
+    return json
+  } catch {
+    return null
+  }
+}
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get(COOKIE_NAME)?.value
@@ -18,8 +31,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  const payload = verifyToken(token)
-  if (!payload) {
+  const payload = readJwtPayload(token)
+  const now = Math.floor(Date.now() / 1000)
+  if (!payload || (payload.exp && payload.exp < now)) {
     const response = NextResponse.redirect(new URL('/login', request.url))
     response.cookies.delete(COOKIE_NAME)
     return response
