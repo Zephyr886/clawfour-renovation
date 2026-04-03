@@ -1,7 +1,6 @@
 import { cache } from 'react'
 import { cookies } from 'next/headers'
 import type { NextRequest } from 'next/server'
-import prisma from '@/lib/prisma'
 import { COOKIE_NAME, verifyToken, type JWTPayload } from '@/lib/auth'
 
 export type AuthUser = JWTPayload & {
@@ -37,6 +36,7 @@ export async function getRequestAuthUser(request: NextRequest): Promise<AuthUser
 }
 
 async function hydrateAuthUser(payload: JWTPayload): Promise<AuthUser | null> {
+  const { prisma } = await import('@/lib/prisma')
   const user = await prisma.user.findUnique({
     where: { id: payload.id },
     select: {
