@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createHash } from 'crypto'
-import { getUserByUsername } from '@/lib/data'
 import { signToken, COOKIE_NAME } from '@/lib/auth'
 
 function hashPassword(password: string): string {
@@ -16,6 +15,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '用户名和密码不能为空' }, { status: 400 })
     }
 
+    const { getUserByUsername } = await import('@/lib/data')
     const user = await getUserByUsername(username)
 
     if (!user || user.password !== hashPassword(password)) {

@@ -1,6 +1,5 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { requireProjectAccess } from '@/lib/rbac'
 
 // GET /api/timelines/[id]/nodes - list all nodes for a project grouped by phase
@@ -9,6 +8,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const access = await requireProjectAccess(request, params.id, 'read')
     if ('error' in access) return access.error
 
+    const { prisma } = await import('@/lib/prisma')
     const phases = await prisma.phase.findMany({
       where: { projectId: params.id },
       include: {
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const access = await requireProjectAccess(request, params.id, 'write')
     if ('error' in access) return access.error
 
+    const { prisma } = await import('@/lib/prisma')
     const body = await request.json()
     const { phaseId, title, description, urgency, assignee, plannedDate, actualDate, status, order } = body
 

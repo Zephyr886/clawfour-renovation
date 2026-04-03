@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { createNodeCommentDirect, createComment, createActivityLog } from '@/lib/data'
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,6 +12,8 @@ export async function POST(req: NextRequest) {
     if (!content?.trim() || !targetId || !targetType) {
       return NextResponse.json({ error: '缺少必填字段' }, { status: 400 })
     }
+
+    const { createNodeCommentDirect, createComment, createActivityLog } = await import('@/lib/data')
 
     let comment
     if (targetType === 'Node') {

@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,6 +8,7 @@ export async function GET(request: NextRequest) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     // HOMEOWNER can only get basic user list for assignee selection
+    const { prisma } = await import('@/lib/prisma')
     const users = await prisma.user.findMany({
       where: { isDisabled: false },
       select: {

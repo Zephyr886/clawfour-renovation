@@ -1,6 +1,5 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -8,6 +7,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const session = getSession(request)
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    const { prisma } = await import('@/lib/prisma')
     const entries = await prisma.nodeEntry.findMany({
       where: { nodeId: params.id },
       include: { creator: { select: { id: true, name: true, username: true, role: true } } },
@@ -24,6 +24,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const session = getSession(request)
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    const { prisma } = await import('@/lib/prisma')
     const body = await request.json()
     const { type, title, content, urgency } = body
     if (!title?.trim()) {

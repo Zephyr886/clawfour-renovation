@@ -1,6 +1,5 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { requireAuth, requireProjectAccess } from '@/lib/rbac'
 
 export async function GET(request: NextRequest) {
@@ -18,6 +17,7 @@ export async function GET(request: NextRequest) {
 
     let resolvedProjectId = projectId
     if (!resolvedProjectId && nodeId) {
+      const { prisma } = await import('@/lib/prisma')
       const node = await prisma.node.findUnique({ where: { id: nodeId }, select: { projectId: true } })
       resolvedProjectId = node?.projectId || null
     }
@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     const access = await requireProjectAccess(request, resolvedProjectId, 'read')
     if ('error' in access) return access.error
 
+    const { prisma } = await import('@/lib/prisma')
     const where: any = { projectId: resolvedProjectId }
     if (nodeId) where.nodeId = nodeId
 
@@ -60,6 +61,7 @@ export async function POST(request: NextRequest) {
     const access = await requireProjectAccess(request, projectId, 'write')
     if ('error' in access) return access.error
 
+    const { prisma } = await import('@/lib/prisma')
     if (nodeId) {
       const node = await prisma.node.findFirst({ where: { id: nodeId, projectId }, select: { id: true } })
       if (!node) return NextResponse.json({ error: '关联节点不存在或不属于当前项目' }, { status: 400 })

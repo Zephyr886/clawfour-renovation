@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
 
 export async function PATCH(
   request: NextRequest,
@@ -15,6 +14,7 @@ export async function PATCH(
     const body = await request.json()
     const { name, phaseKey, description, status, order, startDate, endDate } = body
 
+    const { prisma } = await import('@/lib/prisma')
     const existing = await prisma.phase.findUnique({
       where: { id: params.id },
       select: { projectId: true, name: true },
@@ -62,6 +62,7 @@ export async function DELETE(
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     if (session.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden: Admin only' }, { status: 403 })
 
+    const { prisma } = await import('@/lib/prisma')
     const existing = await prisma.phase.findUnique({
       where: { id: params.id },
       select: { projectId: true, name: true },

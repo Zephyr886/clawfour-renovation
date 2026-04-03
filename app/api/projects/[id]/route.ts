@@ -1,6 +1,5 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
-import { getProjectById } from '@/lib/data'
 import { getRequestAuthUser } from '@/lib/session'
 
 export async function GET(
@@ -13,6 +12,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { getProjectById } = await import('@/lib/data')
     const project = await getProjectById(params.id, user)
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })

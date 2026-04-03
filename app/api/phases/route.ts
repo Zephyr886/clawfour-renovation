@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,9 +15,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '项目ID和阶段名称不能为空' }, { status: 400 })
     }
 
+    const { prisma } = await import('@/lib/prisma')
+
     // Get max order if not provided
     let phaseOrder = order
     if (phaseOrder === undefined) {
+      const { prisma } = await import('@/lib/prisma')
       const maxOrder = await prisma.phase.aggregate({
         where: { projectId },
         _max: { order: true },

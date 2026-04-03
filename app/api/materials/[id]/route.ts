@@ -1,6 +1,5 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
 import { requireMaterialAccess } from '@/lib/rbac'
 
 export async function PATCH(
@@ -8,6 +7,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const access = await requireMaterialAccess(request, params.id, 'write')
     if ('error' in access) return access.error
 
@@ -15,6 +15,7 @@ export async function PATCH(
     const { status, quantity, price, name, brand, description, category, unit, nodeId } = body
 
     if (nodeId !== undefined && nodeId !== null) {
+      const { prisma } = await import('@/lib/prisma')
       const node = await prisma.node.findFirst({
         where: { id: nodeId, projectId: access.context.projectId },
         select: { id: true },
@@ -68,6 +69,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const access = await requireMaterialAccess(request, params.id, 'write')
     if ('error' in access) return access.error
 

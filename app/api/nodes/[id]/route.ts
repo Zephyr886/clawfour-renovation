@@ -1,7 +1,5 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
-import { getNodeById } from '@/lib/data'
-import prisma from '@/lib/prisma'
 import { requireNodeAccess } from '@/lib/rbac'
 
 export async function GET(
@@ -12,6 +10,7 @@ export async function GET(
     const access = await requireNodeAccess(request, params.id, 'read')
     if ('error' in access) return access.error
 
+    const { getNodeById } = await import('@/lib/data')
     const node = await getNodeById(params.id)
     if (!node) return NextResponse.json({ error: 'Node not found' }, { status: 404 })
     return NextResponse.json({ data: node })
@@ -26,6 +25,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const access = await requireNodeAccess(request, params.id, 'write')
     if ('error' in access) return access.error
 
@@ -86,6 +86,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const access = await requireNodeAccess(request, params.id, 'write')
     if ('error' in access) return access.error
 

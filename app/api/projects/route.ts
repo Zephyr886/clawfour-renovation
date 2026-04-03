@@ -1,13 +1,13 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { getProjects } from '@/lib/data'
 
 export async function GET(request: NextRequest) {
   try {
     const session = getSession(request)
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    const { getProjects } = await import('@/lib/data')
     const projects = await getProjects(session.id, session.role)
     return NextResponse.json({ data: projects })
   } catch (error) {
