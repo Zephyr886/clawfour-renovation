@@ -1,14 +1,14 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { requireProjectAccess } from '@/lib/rbac'
 
 // GET /api/timelines/[id]/nodes - list all nodes for a project grouped by phase
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = getSession(request)
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const access = await requireProjectAccess(request, params.id, 'read')
+    if ('error' in access) return access.error
 
+    const { prisma } = await import('@/lib/prisma')
     const phases = await prisma.phase.findMany({
       where: { projectId: params.id },
       include: {
@@ -33,28 +33,43 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 // POST /api/timelines/[id]/nodes - create a node in a phase
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = getSession(request)
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (session.role === 'HOMEOWNER') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const access = await requireProjectAccess(request, params.id, 'write')
+    if ('error' in access) return access.error
 
+    const { prisma } = await import('@/lib/prisma')
     const body = await request.json()
-    const { phaseId, title, description, urgency, assignee, plannedDate } = body
+    const { phaseId, title, description, urgency, assignee, plannedDate, actualDate, status, order } = body
 
     if (!phaseId || !title) {
       return NextResponse.json({ error: '阶段ID和节点名称不能为空' }, { status: 400 })
     }
 
-    const node = await prisma.node.create({
-      data: {
-        phaseId,
-        projectId: params.id,
-        title,
-        description,
-        urgency: urgency || 'NORMAL',
-        assignee,
-        plannedDate: plannedDate ? new Date(plannedDate) : null,
-        createdBy: session.id,
-      },
+    const phase = await prisma.phase.findFirst({
+      where: { id: phaseId, projectId: params.id },
+      select: { id: true },
+    })
+    if (!phase) {
+      return NextResponse.json({ error: '阶段不存在或不属于当前项目' }, { status: 400 })
+    }
+
+    const maxOrder = await prisma.node.aggregate({ where: { phaseId }, _max: { order: true } })
+
+    const node = await prisma.$transaction(async tx => {
+      return tx.node.create({
+        data: {
+          phaseId,
+          projectId: params.id,
+          title,
+          description,
+          urgency: urgency || 'NORMAL',
+          assignee,
+          plannedDate: plannedDate ? new Date(plannedDate) : null,
+          actualDate: actualDate ? new Date(actualDate) : null,
+          status: status || 'PENDING',
+          order: Number.isFinite(Number(order)) ? Number(order) : (maxOrder._max.order || 0) + 1,
+          createdBy: access.context.user.id,
+        },
+      })
     })
 
     await prisma.activityLog.create({
@@ -65,7 +80,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         entityType: 'Node',
         entityId: node.id,
         description: `创建了节点「${title}」`,
-        userId: session.id,
+        userId: access.context.user.id,
       },
     })
 

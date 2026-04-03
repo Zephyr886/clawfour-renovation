@@ -9,7 +9,11 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { formatDate, formatDateTime, formatRelativeTime, statusLabel, urgencyLabel, ENTRY_TYPE_LABELS, parseJsonArray } from '@/lib/utils'
 import { ArrowLeft, Calendar, User, Package, MessageSquare, BarChart2, Clock, AlertCircle } from 'lucide-react'
 import { NodeCommentForm } from '@/components/nodes/node-comment-section'
+import { getCurrentAuthUser } from '@/lib/session'
+import { NodesManager } from '@/components/timeline/nodes-manager'
 import { ProgressFormSection } from '@/components/nodes/progress-form-section'
+import { WorkEntryForm } from '@/components/nodes/work-entry-form'
+import { MaterialList } from '@/components/materials/material-list'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,9 +22,10 @@ export default async function NodeDetailPage({
 }: {
   params: { projectId: string; nodeId: string }
 }) {
+  const user = await getCurrentAuthUser()
   let node: any = null
   try {
-    node = await getNodeById(params.nodeId)
+    node = await getNodeById(params.nodeId, user)
   } catch {
     // db error
   }
@@ -31,7 +36,7 @@ export default async function NodeDetailPage({
   const latestProgress = node.progressRecords?.[0]
 
   return (
-    <AppLayout currentPath="/timeline">
+    <AppLayout user={user} currentPath="/timeline">
       {/* Back Navigation */}
       <div className="mb-6">
         <Link
@@ -80,6 +85,7 @@ export default async function NodeDetailPage({
                 <div>
                   <div className="text-xs text-textSecondary mb-1 flex items-center gap-1"><User size={11} />负责人</div>
                   <div className="font-medium text-text">{node.assignee || '未分配'}</div>
+                  <div className="text-xs text-textSecondary mt-1">可在下方节点管理区更新负责人、状态、日期和阶段</div>
                 </div>
                 <div>
                   <div className="text-xs text-textSecondary mb-1 flex items-center gap-1"><User size={11} />创建人</div>
@@ -158,16 +164,25 @@ export default async function NodeDetailPage({
             </CardContent>
           </Card>
 
-          {/* NodeEntries / Activity Log */}
-          {(node.entries || []).length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">工作记录 ({node.entries.length})</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
+          {/* NodeEntries / Work Log */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">工作记录 ({(node.entries || []).length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* Add Work Entry Form - only for non-homeowner */}
+              {user && user.role !== 'HOMEOWNER' && (
+                <div className="mb-4 pb-4 border-b border-gray-100">
+                  <p className="text-xs text-textSecondary mb-3">新增工作记录</p>
+                  <WorkEntryForm nodeId={node.id} />
+                </div>
+              )}
+              {(node.entries || []).length === 0 ? (
+                <div className="text-center py-6 text-textSecondary text-sm">暂无工作记录</div>
+              ) : (
                 <div className="divide-y divide-gray-100">
                   {node.entries.map((entry: any) => (
-                    <div key={entry.id} className="px-6 py-4">
+                    <div key={entry.id} className="py-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
@@ -187,9 +202,9 @@ export default async function NodeDetailPage({
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right: Sidebar */}
@@ -233,38 +248,33 @@ export default async function NodeDetailPage({
           )}
 
           {/* Materials */}
-          {(node.materials || []).length > 0 && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Package size={16} className="text-warning" />
-                  <CardTitle className="text-base">相关材料 ({node.materials.length})</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y divide-gray-100">
-                  {node.materials.map((material: any) => (
-                    <div key={material.id} className="px-4 py-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-medium text-text">{material.name}</p>
-                          {material.brand && (
-                            <p className="text-xs text-textSecondary">{material.brand}</p>
-                          )}
-                          <p className="text-xs text-textSecondary">
-                            {material.quantity}{material.unit || ''} · {material.price ? `¥${material.price}` : '价格未填'}
-                          </p>
-                        </div>
-                        <StatusBadge status={material.status} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Package size={16} className="text-warning" />
+                <CardTitle className="text-base">相关材料</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <MaterialList
+                materials={node.materials || []}
+                projectId={params.projectId}
+                nodeId={node.id}
+                userRole={user?.role || 'HOMEOWNER'}
+              />
+            </CardContent>
+          </Card>
 
           {/* Activity Logs */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">节点管理</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <NodesManager projectId={params.projectId} phases={[{ ...node.phase, nodes: [node] }]} user={user} />
+            </CardContent>
+          </Card>
+
           {(node.activityLogs || []).length > 0 && (
             <Card>
               <CardHeader>

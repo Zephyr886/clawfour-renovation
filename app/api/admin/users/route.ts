@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
 export async function GET(request: NextRequest) {
@@ -9,6 +8,7 @@ export async function GET(request: NextRequest) {
     const session = getSession(request)
     if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    const { prisma } = await import('@/lib/prisma')
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '用户名、密码和角色不能为空' }, { status: 400 })
     }
 
+    const { prisma } = await import('@/lib/prisma')
     const existingUser = await prisma.user.findUnique({ where: { username } })
     if (existingUser) {
       return NextResponse.json({ error: '用户名已存在' }, { status: 400 })

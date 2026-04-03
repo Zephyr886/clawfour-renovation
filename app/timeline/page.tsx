@@ -8,19 +8,21 @@ import { ProgressBar } from '@/components/shared/progress-bar'
 import { EmptyState } from '@/components/shared/empty-state'
 import { formatDate, calcProjectProgress } from '@/lib/utils'
 import { ArrowRight } from 'lucide-react'
+import { getCurrentUser } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
 export default async function TimelineListPage() {
+  const user = await getCurrentUser()
   let projects: any[] = []
   try {
-    projects = await getProjects()
+    projects = await getProjects(user?.id, user?.role)
   } catch {
     // db not ready
   }
 
   return (
-    <AppLayout currentPath="/timeline">
+    <AppLayout user={user} currentPath="/timeline">
       <PageHeader
         title="项目时间线"
         description="所有装修项目的时间线概览"

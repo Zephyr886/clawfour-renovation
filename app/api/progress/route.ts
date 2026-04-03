@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,6 +16,7 @@ export async function POST(request: NextRequest) {
 
     const pct = Math.max(0, Math.min(100, parseInt(percentage)))
 
+    const { prisma } = await import('@/lib/prisma')
     const record = await prisma.progressRecord.create({
       data: {
         nodeId,
@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const { searchParams } = new URL(request.url)
     const nodeId = searchParams.get('nodeId')
     if (!nodeId) return NextResponse.json({ error: 'nodeId required' }, { status: 400 })

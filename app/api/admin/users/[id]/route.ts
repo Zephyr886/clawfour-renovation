@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
@@ -12,6 +11,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const body = await request.json()
     const { password, role, name, phone, email, isDisabled } = body
 
+    const { prisma } = await import('@/lib/prisma')
     const existingUser = await prisma.user.findUnique({ where: { id: params.id } })
     if (!existingUser) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 

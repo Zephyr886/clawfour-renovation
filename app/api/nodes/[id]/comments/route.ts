@@ -1,10 +1,10 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const comments = await prisma.nodeComment.findMany({
       where: { nodeId: params.id },
       include: { user: { select: { id: true, name: true, username: true, role: true } } },
@@ -21,6 +21,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const session = getSession(request)
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    const { prisma } = await import('@/lib/prisma')
     const body = await request.json()
     const { content } = body
     if (!content?.trim()) return NextResponse.json({ error: '评论内容不能为空' }, { status: 400 })
