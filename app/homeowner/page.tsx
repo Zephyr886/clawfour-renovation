@@ -8,15 +8,17 @@ import { ProgressBar } from '@/components/shared/progress-bar'
 import { EmptyState } from '@/components/shared/empty-state'
 import { formatDate, formatRelativeTime, calcProjectProgress } from '@/lib/utils'
 import { Home, Clock, MessageSquare, Package, AlertCircle } from 'lucide-react'
+import { getCurrentUser } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
 export default async function HomeownerPage() {
+  const user = await getCurrentUser()
   let projects: any[] = []
   let activities: any[] = []
 
   try {
-    projects = await getProjects()
+    projects = await getProjects(user?.id, user?.role)
     activities = await getActivities(undefined, 15)
   } catch {
     // db not ready
@@ -29,7 +31,7 @@ export default async function HomeownerPage() {
     .slice(0, 5)
 
   return (
-    <AppLayout currentPath="/homeowner">
+    <AppLayout user={user} currentPath="/homeowner">
       <PageHeader
         title="业主视角"
         description="以业主身份查看项目进展、沟通记录与材料状态"

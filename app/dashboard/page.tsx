@@ -39,7 +39,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <AppLayout currentPath="/dashboard">
+    <AppLayout user={user} currentPath="/dashboard">
       <PageHeader
         title="Dashboard 总览"
         description={user ? `欢迎回来，${user.name || user.username}` : '装修项目数据总览'}

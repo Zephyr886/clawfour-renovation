@@ -1,26 +1,29 @@
 export const dynamic = 'force-dynamic'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getSession } from '@/lib/auth'
 import { createNodeCommentDirect, createComment, createActivityLog } from '@/lib/data'
-import prisma from '@/lib/prisma'
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const session = getSession(req)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { targetType, targetId, content, projectId } = await req.json()
 
-    // In demo mode, pick a homeowner user
-    const user = await prisma.user.findFirst({ where: { role: 'HOMEOWNER' } })
-    if (!user) throw new Error('No user found')
+    if (!content?.trim() || !targetId || !targetType) {
+      return NextResponse.json({ error: '缺少必填字段' }, { status: 400 })
+    }
 
     let comment
     if (targetType === 'Node') {
       comment = await createNodeCommentDirect({
         nodeId: targetId,
-        content,
+        content: content.trim(),
         projectId,
-        userId: user.id,
+        userId: session.id,
       })
     } else {
-      comment = await createComment({ targetType, targetId, content, projectId, userId: user.id })
+      comment = await createComment({ targetType, targetId, content: content.trim(), projectId, userId: session.id })
     }
 
     if (projectId) {
@@ -30,14 +33,14 @@ export async function POST(req: Request) {
         action: 'COMMENT_ADDED',
         entityType: 'Comment',
         entityId: comment.id,
-        description: '发表了评论',
-        userId: user.id,
+        description: `发表了评论`,
+        userId: session.id,
       })
     }
 
     return NextResponse.json(comment)
   } catch (error) {
-    console.error(error)
+    console.error('POST comment error:', error)
     return NextResponse.json({ error: 'Failed to create comment' }, { status: 500 })
   }
 }

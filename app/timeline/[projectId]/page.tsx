@@ -110,6 +110,34 @@ export default async function ProjectTimelinePage({
         <ProgressBar value={overallProgress} showLabel />
       </div>
 
+      {/* Node Management Panel (for non-homeowner) */}
+      {user && user.role !== 'HOMEOWNER' && (project.phases || []).length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <Settings size={16} className="text-primary" />
+            <h2 className="text-base font-semibold text-text">节点管理</h2>
+            <span className="text-xs text-textSecondary">（新增/编辑/删除节点，快速更新状态）</span>
+          </div>
+          <NodeManager
+            projectId={params.projectId}
+            phases={(project.phases || []).map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              nodes: (p.nodes || []).map((n: any) => ({
+                id: n.id,
+                title: n.title,
+                status: n.status,
+                assignee: n.assignee,
+                plannedDate: n.plannedDate,
+                order: n.order,
+              }))
+            }))}
+            userRole={user.role}
+            availableUsers={allUsers}
+          />
+        </div>
+      )}
+
       {/* Phase Timeline */}
       {(project.phases || []).length === 0 ? (
         <EmptyState icon="📋" title="暂无阶段数据" description="该项目还未配置装修阶段" />

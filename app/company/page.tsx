@@ -6,16 +6,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { ProgressBar } from '@/components/shared/progress-bar'
 import { EmptyState } from '@/components/shared/empty-state'
-import { formatDate, formatRelativeTime, calcProjectProgress, statusLabel } from '@/lib/utils'
+import { formatDate, calcProjectProgress } from '@/lib/utils'
 import { Wrench, Package, ClipboardList, TrendingUp } from 'lucide-react'
+import { getCurrentUser } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CompanyPage() {
+  const user = await getCurrentUser()
   let projects: any[] = []
 
   try {
-    projects = await getProjects()
+    projects = await getProjects(user?.id, user?.role)
   } catch {
     // db not ready
   }
@@ -31,7 +33,7 @@ export default async function CompanyPage() {
     .slice(0, 10)
 
   return (
-    <AppLayout currentPath="/company">
+    <AppLayout user={user} currentPath="/company">
       <PageHeader
         title="装修公司视角"
         description="以装修公司身份管理项目执行、节点更新与材料记录"
@@ -41,8 +43,8 @@ export default async function CompanyPage() {
       <div className="bg-purple-50 border border-purple-100 rounded-xl px-5 py-4 mb-6 flex items-center gap-3">
         <Wrench size={20} className="text-purple-500 shrink-0" />
         <div>
-          <p className="text-sm font-medium text-purple-700">装修公司视角 · 演示账号</p>
-          <p className="text-xs text-purple-500">用户名: lijiasheng · 密码: demo123 · 角色: COMPANY</p>
+          <p className="text-sm font-medium text-purple-700">装修公司视角</p>
+          <p className="text-xs text-purple-500">{user ? `当前用户: ${user.name || user.username}` : '请先登录'}</p>
         </div>
       </div>
 
